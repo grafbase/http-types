@@ -68,7 +68,10 @@ impl BasicAuth {
 
     /// Create a new instance from the base64 encoded credentials.
     pub fn from_credentials(credentials: impl AsRef<[u8]>) -> crate::Result<Self> {
-        let bytes = base64::decode(credentials).status(400)?;
+        use base64::Engine;
+        let bytes = base64::engine::general_purpose::STANDARD_NO_PAD
+            .decode(credentials)
+            .status(400)?;
         let credentials = String::from_utf8(bytes).status(400)?;
 
         let mut iter = credentials.splitn(2, ':');
@@ -96,8 +99,10 @@ impl BasicAuth {
 
     /// Get the `HeaderValue`.
     pub fn value(&self) -> HeaderValue {
+        use base64::Engine;
         let scheme = AuthenticationScheme::Basic;
-        let credentials = base64::encode(format!("{}:{}", self.username, self.password));
+        let credentials = base64::engine::general_purpose::STANDARD_NO_PAD
+            .encode(format!("{}:{}", self.username, self.password));
         let auth = Authorization::new(scheme, credentials);
         auth.value()
     }
